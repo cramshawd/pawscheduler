@@ -4,8 +4,6 @@ from .config import settings
 from .database import Base, engine
 from .routers import sitters, clients, appointments, booking_requests, invites
 
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="DogSitter Calendar API", version="1.0.0")
 
 app.add_middleware(
