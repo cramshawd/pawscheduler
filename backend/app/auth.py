@@ -2,10 +2,9 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-from sqlalchemy.orm import Session
+from supabase import Client
 from .config import settings
-from .database import get_db
-from . import models
+from .database import get_supabase
 
 bearer = HTTPBearer()
 
@@ -20,10 +19,7 @@ def decode_token(token: str) -> dict:
         )
         return payload
     except JWTError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {e}",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {e}")
 
 
 def get_current_user_id(
@@ -38,35 +34,25 @@ def get_current_user_id(
 
 def get_current_sitter(
     user_id: str = Depends(get_current_user_id),
-    db: Session = Depends(get_db),
-) -> models.Sitter:
-    sitter = db.query(models.Sitter).filter(models.Sitter.user_id == user_id).first()
-    if not sitter or not sitter.is_active:
+    sb: Client = Depends(get_supabase),
+) -> dict:
+    result = sb.table("sitters").select("*").eq("user_id", user_id).execute()
+    if not result.data or not result.data[0].get("is_active"):
         raise HTTPException(status_code=403, detail="Not a registered sitter")
-    return sitter
+    return result.data[0]
 
 
-def get_current_owner(sitter: models.Sitter = Depends(get_current_sitter)) -> models.Sitter:
-    if not sitter.is_owner:
+def get_current_owner(sitter: dict = Depends(get_current_sitter)) -> dict:
+    if not sitter.get("is_owner"):
         raise HTTPException(status_code=403, detail="Owner access required")
     return sitter
 
 
 def get_current_client(
     user_id: str = Depends(get_current_user_id),
-    db: Session = Depends(get_db),
-) -> models.Client:
-    client = db.query(models.Client).filter(models.Client.user_id == user_id).first()
-    if not client:
+    sb: Client = Depends(get_supabase),
+) -> dict:
+    result = sb.table("clients").select("*, pets(*)").eq("user_id", user_id).execute()
+    if not result.data:
         raise HTTPException(status_code=403, detail="Not a registered client")
-    return client
-
-
-def get_current_user_flexible(
-    user_id: str = Depends(get_current_user_id),
-    db: Session = Depends(get_db),
-) -> tuple[Optional[models.Sitter], Optional[models.Client]]:
-    """Returns whichever account type the user has."""
-    sitter = db.query(models.Sitter).filter(models.Sitter.user_id == user_id).first()
-    client = db.query(models.Client).filter(models.Client.user_id == user_id).first()
-    return sitter, client
+    return result.data[0]
