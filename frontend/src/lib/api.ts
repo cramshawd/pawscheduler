@@ -21,7 +21,11 @@ export default api;
 export interface Sitter {
   id: string;
   name: string;
+  email?: string;
+  phone?: string;
   bio?: string;
+  is_owner?: boolean;
+  is_active?: boolean;
 }
 
 export interface Pet {

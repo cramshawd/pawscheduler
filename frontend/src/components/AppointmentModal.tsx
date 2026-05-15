@@ -10,7 +10,7 @@ interface Props {
   onSaved: () => void;
 }
 
-export default function AppointmentModal({ sitterId, pets, initial, onClose, onSaved }: Props) {
+export default function AppointmentModal({ pets, initial, onClose, onSaved }: Props) {
   const isEdit = !!initial?.id;
   const fmt = (d?: Date | string) =>
     d ? format(new Date(d), "yyyy-MM-dd'T'HH:mm") : "";

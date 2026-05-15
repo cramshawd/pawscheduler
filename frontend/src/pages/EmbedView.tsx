@@ -1,10 +1,10 @@
 import { useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import interactionPlugin, { DateSelectArg } from "@fullcalendar/interaction";
-import { EventInput } from "@fullcalendar/core";
+import interactionPlugin from "@fullcalendar/interaction";
+import type { EventInput, DateSelectArg } from "@fullcalendar/core";
 import { useQuery } from "@tanstack/react-query";
-import api, { Sitter, AppointmentPublic, AlternativeSitter, Pet } from "../lib/api";
+import api, { Sitter, AppointmentPublic, AlternativeSitter } from "../lib/api";
 import SitterCard from "../components/SitterCard";
 import BookingRequestModal from "../components/BookingRequestModal";
 import { useAuth } from "../contexts/AuthContext";

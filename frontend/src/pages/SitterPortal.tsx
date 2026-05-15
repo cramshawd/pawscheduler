@@ -10,7 +10,8 @@ import api, { Appointment, BookingRequest } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import AppointmentModal from "../components/AppointmentModal";
 
-const STATUS_COLORS: Record<string, string> = {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-700",
   confirmed: "bg-green-100 text-green-700",
   declined: "bg-red-100 text-red-600",
