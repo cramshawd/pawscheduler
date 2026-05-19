@@ -9,14 +9,131 @@ import SitterCard from "../components/SitterCard";
 import BookingRequestModal from "../components/BookingRequestModal";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+
+type LoginMode = "signin" | "signup" | "reset";
+
+function LoginModal({ onClose }: { onClose: () => void }) {
+  const { signIn, signUp } = useAuth();
+  const [mode, setMode] = useState<LoginMode>("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      if (mode === "reset") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setDone(true);
+      } else if (mode === "signin") {
+        await signIn(email, password);
+        onClose();
+      } else {
+        await signUp(email, password);
+        setDone(true);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-gray-800">
+            {mode === "reset" ? "Reset Password" : mode === "signin" ? "Sign In" : "Create Account"}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+        </div>
+
+        {done ? (
+          <div className="text-center py-4">
+            <div className="text-3xl mb-2">📬</div>
+            <p className="text-sm text-gray-600">
+              {mode === "reset"
+                ? "Check your email for a reset link."
+                : "Check your email to confirm your account, then sign in."}
+            </p>
+            <button onClick={() => { setMode("signin"); setDone(false); }} className="mt-3 text-sm text-brand-600 hover:underline">
+              Back to sign in
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex rounded-lg overflow-hidden border border-gray-200 text-sm mb-4">
+              {(["signin", "signup"] as LoginMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setMode(m); setError(""); }}
+                  className={`flex-1 py-2 font-medium transition-colors ${mode === m ? "bg-brand-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                >
+                  {m === "signin" ? "Sign In" : "Create Account"}
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+              />
+              {mode !== "reset" && (
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              )}
+              {mode === "signin" && (
+                <div className="text-right">
+                  <button type="button" onClick={() => { setMode("reset"); setError(""); }} className="text-xs text-gray-400 hover:text-brand-600">
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+              {error && <p className="text-sm text-red-600">{error}</p>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 disabled:opacity-50 transition-colors"
+              >
+                {loading ? "…" : mode === "reset" ? "Send Reset Link" : mode === "signin" ? "Sign In" : "Create Account"}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function EmbedView() {
-  const { client, sitter } = useAuth();
+  const { client, sitter, signOut, user } = useAuth();
   const navigate = useNavigate();
 
   const [selectedSitter, setSelectedSitter] = useState<Sitter | null>(null);
   const [selection, setSelection] = useState<{ start: Date; end: Date } | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const [range, setRange] = useState(() => {
     const now = new Date();
@@ -86,7 +203,7 @@ export default function EmbedView() {
 
   function handleBookClick() {
     if (!client) {
-      navigate("/login");
+      setShowLoginModal(true);
       return;
     }
     setShowBookingModal(true);
@@ -108,14 +225,28 @@ export default function EmbedView() {
           <p className="text-gray-500 text-sm mt-1">
             Select a sitter, then click and drag on the calendar to pick your dates.
           </p>
-          {sitter?.is_owner && (
-            <Link
-              to="/admin"
-              className="absolute top-0 right-0 text-xs text-gray-400 hover:text-brand-600 transition-colors"
-            >
-              Admin Dashboard →
-            </Link>
-          )}
+          <div className="absolute top-0 right-0 flex items-center gap-3">
+            {sitter?.is_owner && (
+              <Link to="/admin" className="text-xs text-gray-400 hover:text-brand-600 transition-colors">
+                Admin Dashboard →
+              </Link>
+            )}
+            {user ? (
+              <button
+                onClick={signOut}
+                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="text-xs text-brand-600 hover:text-brand-800 font-medium transition-colors"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -186,7 +317,7 @@ export default function EmbedView() {
                       onClick={handleBookClick}
                       className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600"
                     >
-                      {client ? "Request Booking" : "Sign in to Book"}
+                      {client ? "Request Booking" : "Sign In to Book"}
                     </button>
                   </div>
                 )}
@@ -217,7 +348,7 @@ export default function EmbedView() {
                           onClick={() => {
                             setSelectedSitter(sitter);
                             if (client) setShowBookingModal(true);
-                            else navigate("/login");
+                            else setShowLoginModal(true);
                           }}
                           className="shrink-0 px-3 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600"
                         >
@@ -232,6 +363,8 @@ export default function EmbedView() {
           </div>
         </div>
       </div>
+
+      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
 
       {showBookingModal && selectedSitter && (
         <BookingRequestModal
