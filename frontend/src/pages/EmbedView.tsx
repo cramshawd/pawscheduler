@@ -127,7 +127,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function EmbedView() {
-  const { client, sitter, signOut, user } = useAuth();
+  const { client, signOut, user } = useAuth();
   const navigate = useNavigate();
 
   const [selectedSitter, setSelectedSitter] = useState<Sitter | null>(null);
@@ -226,9 +226,9 @@ export default function EmbedView() {
             Select a sitter, then click and drag on the calendar to pick your dates.
           </p>
           <div className="absolute top-0 right-0 flex items-center gap-3">
-            {sitter?.is_owner && (
-              <Link to="/admin" className="text-xs text-gray-400 hover:text-brand-600 transition-colors">
-                Admin Dashboard →
+            {user && !client && (
+              <Link to="/" className="text-xs text-gray-400 hover:text-brand-600 transition-colors">
+                Staff Dashboard →
               </Link>
             )}
             {user ? (
