@@ -8,6 +8,7 @@ import ClientPortal from "./pages/ClientPortal";
 import SitterPortal from "./pages/SitterPortal";
 import AdminDashboard from "./pages/AdminDashboard";
 import EmbedView from "./pages/EmbedView";
+import ResetPassword from "./pages/ResetPassword";
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -55,6 +56,7 @@ export default function App() {
 
         {/* Auth */}
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/invite/:token" element={<AcceptInvite />} />
 
         {/* Authenticated routes — with navbar */}

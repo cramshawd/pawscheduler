@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
 
 type Role = "choose" | "client" | "sitter";
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "reset";
 
 export default function Login() {
   const { signIn, signUp } = useAuth();
@@ -16,6 +17,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [signedUp, setSignedUp] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   function selectRole(r: Role) {
     setRole(r);
@@ -23,6 +25,14 @@ export default function Login() {
     setEmail("");
     setPassword("");
     setError("");
+    setResetSent(false);
+  }
+
+  function goToReset() {
+    setMode("reset");
+    setPassword("");
+    setError("");
+    setResetSent(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -30,7 +40,13 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      if (mode === "signin") {
+      if (mode === "reset") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setResetSent(true);
+      } else if (mode === "signin") {
         await signIn(email, password);
         navigate("/");
       } else {
@@ -38,7 +54,7 @@ export default function Login() {
         setSignedUp(true);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -112,16 +128,18 @@ export default function Login() {
     );
   }
 
-  // ── Auth form (client or sitter) ──────────────────────────────────────────
+  // ── Auth form ─────────────────────────────────────────────────────────────
   const isClient = role === "client";
+  const isReset = mode === "reset";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white rounded-xl shadow p-8 max-w-sm w-full">
+
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => selectRole("choose")}
+            onClick={() => isReset ? setMode("signin") : selectRole("choose")}
             className="text-gray-400 hover:text-gray-600 text-sm"
             aria-label="Back"
           >
@@ -129,18 +147,20 @@ export default function Login() {
           </button>
           <div>
             <h1 className="text-lg font-bold leading-tight">
-              {isClient ? "🏠 Pet Owner" : "🐕 Dog Sitter"}
+              {isReset ? "Reset password" : isClient ? "🏠 Pet Owner" : "🐕 Dog Sitter"}
             </h1>
             <p className="text-xs text-gray-500">
-              {isClient
-                ? mode === "signin" ? "Sign in to manage your bookings" : "Create your free account"
-                : "Sign in to your sitter account"}
+              {isReset
+                ? "We'll send a reset link to your email"
+                : isClient
+                  ? mode === "signin" ? "Sign in to manage your bookings" : "Create your free account"
+                  : "Sign in to your sitter account"}
             </p>
           </div>
         </div>
 
-        {/* Client mode toggle */}
-        {isClient && (
+        {/* Client mode toggle (not shown on reset screen) */}
+        {isClient && !isReset && (
           <div className="flex rounded-lg overflow-hidden border border-gray-200 text-sm mb-4">
             <button
               type="button"
@@ -164,43 +184,80 @@ export default function Login() {
         )}
 
         {/* Sitter invite notice */}
-        {!isClient && (
+        {!isClient && !isReset && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4 text-xs text-amber-700">
             New sitters join by invitation. If you received an invite link, use that to create your account.
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            type="email"
-            placeholder="Email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-          />
+        {/* Reset sent confirmation */}
+        {resetSent ? (
+          <div className="text-center py-4">
+            <div className="text-3xl mb-3">📬</div>
+            <p className="text-sm font-medium text-gray-800 mb-1">Check your email</p>
+            <p className="text-xs text-gray-500 mb-4">
+              We sent a password reset link to <strong>{email}</strong>.
+            </p>
+            <button
+              onClick={() => { setMode("signin"); setResetSent(false); }}
+              className="text-sm text-brand-600 hover:underline"
+            >
+              Back to sign in
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+            {!isReset && (
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+              />
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 disabled:opacity-50 transition-colors"
-          >
-            {loading ? "…" : mode === "signin" ? "Sign In" : "Create Account"}
-          </button>
-        </form>
+            {/* Forgot password link — only on sign-in screen */}
+            {mode === "signin" && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={goToReset}
+                  className="text-xs text-gray-400 hover:text-brand-600"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
-        {/* Sitter: link to invite flow */}
-        {!isClient && (
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 disabled:opacity-50 transition-colors"
+            >
+              {loading
+                ? "…"
+                : isReset
+                  ? "Send Reset Link"
+                  : mode === "signin" ? "Sign In" : "Create Account"}
+            </button>
+          </form>
+        )}
+
+        {/* Sitter invite note */}
+        {!isClient && !isReset && (
           <p className="mt-4 text-center text-xs text-gray-400">
             Don't have an account?{" "}
             <span className="text-gray-500">Check your invite email for a sign-up link.</span>
