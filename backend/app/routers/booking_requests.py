@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from supabase import Client
 from .. import schemas
 from ..database import get_supabase
-from ..auth import get_current_client, get_current_sitter
+from ..auth import get_current_client, get_current_sitter, get_current_owner
 
 router = APIRouter(prefix="/booking-requests", tags=["booking-requests"])
 
@@ -132,3 +132,19 @@ def respond_to_request(
     req["pets"] = [r["pets"] for r in sb.table("booking_request_pets").select("pets(*)").eq("request_id", request_id).execute().data]
     req["client"] = None
     return req
+
+
+# ── Admin ─────────────────────────────────────────────────────────────────────
+
+@router.get("/admin/all", response_model=list[schemas.BookingRequest])
+def admin_all_requests(
+    status: str = Query(None),
+    owner: dict = Depends(get_current_owner),
+    sb: Client = Depends(get_supabase),
+):
+    q = sb.table("booking_requests").select("*").order("created_at", desc=True)
+    if status:
+        q = q.eq("status", status)
+    result = q.execute()
+    requests = _attach_pets(sb, result.data)
+    return _attach_clients(sb, requests)
