@@ -227,7 +227,7 @@ export default function EmbedView() {
           </p>
           <div className="absolute top-0 right-0 flex items-center gap-3">
             {user && !client && (
-              <Link to="/" className="text-xs text-gray-400 hover:text-brand-600 transition-colors">
+              <Link to="/admin" className="text-xs text-gray-400 hover:text-brand-600 transition-colors">
                 Staff Dashboard →
               </Link>
             )}

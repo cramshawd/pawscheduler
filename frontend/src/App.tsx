@@ -34,16 +34,18 @@ function RequireSitter({ children }: { children: JSX.Element }) {
 
 function RequireOwner({ children }: { children: JSX.Element }) {
   const { sitter, loading } = useAuth();
-  if (loading) return null;
-  if (!sitter?.is_owner) return <Navigate to="/" replace />;
+  if (loading) return <div className="flex items-center justify-center h-screen text-gray-400">Loading…</div>;
+  if (!sitter?.is_owner) return <Navigate to="/login" replace />;
   return children;
 }
 
 function Home() {
-  const { sitter, client } = useAuth();
+  const { sitter, client, user, loading } = useAuth();
+  if (loading) return <div className="flex items-center justify-center h-screen text-gray-400">Loading…</div>;
   if (sitter?.is_owner) return <Navigate to="/admin" replace />;
   if (sitter) return <Navigate to="/sitter" replace />;
   if (client) return <Navigate to="/client" replace />;
+  if (user) return <Navigate to="/login" replace />;
   return <Navigate to="/embed" replace />;
 }
 
