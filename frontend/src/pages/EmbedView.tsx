@@ -8,10 +8,10 @@ import api, { Sitter, AppointmentPublic, AlternativeSitter } from "../lib/api";
 import SitterCard from "../components/SitterCard";
 import BookingRequestModal from "../components/BookingRequestModal";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function EmbedView() {
-  const { client } = useAuth();
+  const { client, sitter } = useAuth();
   const navigate = useNavigate();
 
   const [selectedSitter, setSelectedSitter] = useState<Sitter | null>(null);
@@ -103,11 +103,19 @@ export default function EmbedView() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center pt-4">
+        <div className="text-center pt-4 relative">
           <h1 className="text-2xl font-bold text-gray-800">Find a Dog Sitter</h1>
           <p className="text-gray-500 text-sm mt-1">
             Select a sitter, then click and drag on the calendar to pick your dates.
           </p>
+          {sitter?.is_owner && (
+            <Link
+              to="/admin"
+              className="absolute top-0 right-0 text-xs text-gray-400 hover:text-brand-600 transition-colors"
+            >
+              Admin Dashboard →
+            </Link>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
