@@ -4,6 +4,10 @@ A calendar application for managing dog sitter bookings. Embeds into any website
 
 ---
 
+## Summit integration
+
+I've added a webhook for Summit Cognitive to see how the API works
+
 ## Architecture
 
 | Layer | Tech | Hosting |
